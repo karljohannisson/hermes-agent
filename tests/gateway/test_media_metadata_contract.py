@@ -56,7 +56,7 @@ _ALL_ADAPTERS = [
     ("plugins.platforms.feishu.adapter", "FeishuAdapter"),
     ("plugins.platforms.matrix.adapter", "MatrixAdapter"),
     ("gateway.platforms.mattermost", "MattermostAdapter"),
-    ("gateway.platforms.signal", "SignalAdapter"),
+    ("plugins.platforms.signal.adapter", "SignalAdapter"),
     ("plugins.platforms.slack.adapter", "SlackAdapter"),
     ("plugins.platforms.telegram.adapter", "TelegramAdapter"),
     ("plugins.platforms.wecom.adapter", "WeComAdapter"),
@@ -64,5 +64,3 @@ _ALL_ADAPTERS = [
     ("plugins.platforms.whatsapp.adapter", "WhatsAppAdapter"),
     ("gateway.platforms.yuanbao", "YuanbaoAdapter"),
 ]
-
-
