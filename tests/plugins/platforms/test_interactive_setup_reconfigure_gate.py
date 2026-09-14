@@ -27,6 +27,7 @@ _WIZARDS = [
     ("plugins.platforms.matrix.adapter", "MATRIX_PASSWORD"),
     ("plugins.platforms.mattermost.adapter", "MATTERMOST_TOKEN"),
     ("plugins.platforms.raft.adapter", "RAFT_PROFILE"),
+    ("plugins.platforms.signal.adapter", "SIGNAL_HTTP_URL"),
     ("plugins.platforms.simplex.adapter", "SIMPLEX_WS_URL"),
     ("plugins.platforms.slack.adapter", "SLACK_BOT_TOKEN"),
     ("plugins.platforms.teams.adapter", "TEAMS_CLIENT_ID"),
