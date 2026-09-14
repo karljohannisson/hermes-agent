@@ -2,6 +2,8 @@
 react); works in both CLI and gateway contexts."""
 
 import asyncio
+import contextlib
+import importlib
 import json
 import logging
 import os
@@ -516,9 +518,19 @@ def _platform_max_length(platform):
     try:
         from gateway.platform_registry import platform_registry
         entry = platform_registry.get(platform.value)
-        return entry.max_message_length if entry and entry.max_message_length > 0 else None
+        if entry and entry.max_message_length > 0:
+            return entry.max_message_length
     except Exception:
-        return None
+        pass
+    # Direct helpers (_send_to_platform in tests / cron shims) can run before plugin discovery is
+    # healthy; fall back to a bundled plugin module's constant so historically chunked routes like
+    # Signal keep their non-regression length cap even when the registry entry is temporarily absent.
+    with contextlib.suppress(Exception):
+        mod = importlib.import_module(f"plugins.platforms.{platform.value}.adapter")
+        max_len = getattr(mod, "MAX_MESSAGE_LENGTH", 0)
+        if isinstance(max_len, int) and max_len > 0:
+            return max_len
+    return None
 
 
 # Plugin platforms whose media (Discord: all) sends deliberately bypass the live adapter for the

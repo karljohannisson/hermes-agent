@@ -14,6 +14,7 @@ import contextlib
 from contextlib import suppress
 import functools
 import os
+import threading
 import time
 import weakref as _weakref
 from agent.async_utils import consume_detached_task_result
@@ -33,6 +34,21 @@ if TYPE_CHECKING:  # string annotations only; never imported at runtime (cycle)
 
 # Log-record parity with the origin module.
 logger = logging.getLogger("gateway.run")
+_PLUGIN_DISCOVERY_LOCK = threading.Lock()
+_PLATFORM_PLUGINS_DISCOVERED = False
+
+
+def _ensure_platform_plugins_discovered() -> None:
+    """Run bundled/user platform discovery once before registry lookups on direct adapter creation paths."""
+    global _PLATFORM_PLUGINS_DISCOVERED
+    if _PLATFORM_PLUGINS_DISCOVERED:
+        return
+    with _PLUGIN_DISCOVERY_LOCK:
+        if _PLATFORM_PLUGINS_DISCOVERED:
+            return
+        from hermes_cli.plugins import discover_plugins
+        discover_plugins()
+        _PLATFORM_PLUGINS_DISCOVERED = True
 
 
 class GatewayAdapterLifecycleMixin:
@@ -1497,9 +1513,8 @@ class GatewayAdapterLifecycleMixin:
                 "thread_sessions_per_user", getattr(self.config, "thread_sessions_per_user", False)
             )
         with _log_suppressed(logging.DEBUG, "Platform registry lookup for '%s' failed: %s", platform.value):
-            from hermes_cli.plugins import discover_plugins
             from gateway.platform_registry import platform_registry
-            discover_plugins()
+            _ensure_platform_plugins_discovered()
             if platform_registry.is_registered(platform.value):
                 adapter = platform_registry.create_adapter(platform.value, config)
                 if adapter is None:  # registered but failed — never fall through to built-ins
