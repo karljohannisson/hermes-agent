@@ -12,6 +12,7 @@ from functools import partial
 from agent.secret_scope import get_secret
 
 logger = logging.getLogger(__name__)
+_PLATFORM_MAX_LENGTH_CACHE: dict[str, int | None] = {}
 
 from tools.send_message_targets import _HOME_CHANNEL_ENV_OVERRIDES, _SLACK_USER_ID_RE, resolve_send_target
 from tools.send_message_senders import (
@@ -514,28 +515,35 @@ async def _send_chunks(chunks, send_one):
 
 def _platform_max_length(platform):
     """Chunking limit: the registry's ``max_message_length`` for plugins, else None (no chunking)."""
+    platform_name = platform.value if hasattr(platform, "value") else str(platform)
+    if platform_name in _PLATFORM_MAX_LENGTH_CACHE:
+        return _PLATFORM_MAX_LENGTH_CACHE[platform_name]
     prepare_send_message_platforms()
+    resolved = None
     try:
         from gateway.platform_registry import platform_registry
-        entry = platform_registry.get(platform.value)
+        entry = platform_registry.get(platform_name)
         if entry and entry.max_message_length > 0:
-            return entry.max_message_length
+            resolved = entry.max_message_length
     except Exception:
         pass
-    # Direct helpers (_send_to_platform in tests / cron shims) can run before plugin discovery is
-    # healthy; fall back to a bundled plugin module's constant so historically chunked routes like
-    # Signal keep their non-regression length cap even when the registry entry is temporarily absent.
-    for module_name in (
-        f"plugins.platforms.{platform.value}.adapter",
-        f"gateway.platforms.{platform.value}",
-        f"gateway.platforms.{platform.value}.adapter",
-    ):
-        with contextlib.suppress(Exception):
-            mod = importlib.import_module(module_name)
-            max_len = getattr(mod, "MAX_MESSAGE_LENGTH", 0)
-            if isinstance(max_len, int) and max_len > 0:
-                return max_len
-    return None
+    if resolved is None:
+        # Direct helpers (_send_to_platform in tests / cron shims) can run before plugin discovery is
+        # healthy; fall back to an adapter module's constant so historically chunked routes like
+        # Signal keep their non-regression length cap even when the registry entry is temporarily absent.
+        for module_name in (
+            f"plugins.platforms.{platform_name}.adapter",
+            f"gateway.platforms.{platform_name}",
+            f"gateway.platforms.{platform_name}.adapter",
+        ):
+            with contextlib.suppress(Exception):
+                mod = importlib.import_module(module_name)
+                max_len = getattr(mod, "MAX_MESSAGE_LENGTH", 0)
+                if isinstance(max_len, int) and max_len > 0:
+                    resolved = max_len
+                    break
+    _PLATFORM_MAX_LENGTH_CACHE[platform_name] = resolved
+    return resolved
 
 
 # Plugin platforms whose media (Discord: all) sends deliberately bypass the live adapter for the
