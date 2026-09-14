@@ -273,7 +273,7 @@ def bridge_platform_shared_keys(
 
 def apply_plugin_yaml_hooks(yaml_cfg: dict, gateway_platforms: Any, platforms_data: dict, registry) -> None:
     """Plugin-owned YAML→env config bridges (``PlatformEntry.apply_yaml_config_fn``). Order: shared-key
-    loop → this dispatch → core-only bridges (require_mention/signal) → ``_apply_env_overrides()``."""
+    loop → this dispatch → core-only Telegram top-level require_mention bridge → ``_apply_env_overrides()``."""
     if registry is None:
         return
     for entry in registry.all_entries():
@@ -296,13 +296,13 @@ def apply_plugin_yaml_hooks(yaml_cfg: dict, gateway_platforms: Any, platforms_da
 
 
 def bridge_core_env_settings(yaml_cfg: dict, platforms_data: dict) -> None:
-    """The two YAML→env bridges that stay in core (per-platform ones live in plugin hooks).
+    """The YAML→env bridge that stays in core (per-platform ones live in plugin hooks).
 
     Top-level ``require_mention`` → Telegram when the ``telegram:`` section has none: users write it
     alongside ``group_sessions_per_user`` expecting it to work, and the telegram plugin's hook only
-    runs when a telegram block exists. Signal ``require_mention`` → ``SIGNAL_REQUIRE_MENTION`` (env wins).
+    runs when a telegram block exists.
 
-    Both values are ALWAYS seeded into the owning platform's ``extra`` (the adapters read extra first);
+    The value is ALWAYS seeded into Telegram's ``extra`` (the adapter reads extra first);
     the process-env write is skipped while a multiplexed secondary profile's scope is active — the
     loader runs inside ``_profile_runtime_scope`` for every secondary, and a first-writer-wins write
     there would make the secondary's mention policy the DEFAULT profile's (#80099 class).
@@ -326,12 +326,8 @@ def bridge_core_env_settings(yaml_cfg: dict, platforms_data: dict) -> None:
     # (plugins/platforms/telegram/adapter.py). #41112 / #3823.
     # WhatsApp settings → env vars: migrated to the whatsapp plugin's apply_yaml_config_fn hook
     # (plugins/platforms/whatsapp/adapter.py). #41112 / #3823.
-    signal_cfg = yaml_cfg.get("signal", {})
-    if isinstance(signal_cfg, dict) and "require_mention" in signal_cfg:
-        sig_plat = platforms_data.setdefault(Platform.SIGNAL.value, {})
-        sig_plat.setdefault("extra", {}).setdefault("require_mention", signal_cfg["require_mention"])
-        if not skip_env_bridge and not os.getenv("SIGNAL_REQUIRE_MENTION"):
-            os.environ["SIGNAL_REQUIRE_MENTION"] = str(signal_cfg["require_mention"]).lower()
+    # Signal settings → env vars / extra: migrated to the signal plugin's apply_yaml_config_fn hook
+    # (plugins/platforms/signal/adapter.py).
 
 
 def read_yaml_layers(home: Path) -> dict:
