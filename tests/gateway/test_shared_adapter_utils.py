@@ -16,7 +16,7 @@ from gateway.platforms import helpers
 
 def _adapter_classes():
     from gateway.platforms.qqbot.adapter import QQAdapter
-    from gateway.platforms.signal import SignalAdapter
+    from plugins.platforms.signal.adapter import SignalAdapter
     from gateway.platforms.whatsapp_cloud import WhatsAppCloudAdapter
     from plugins.platforms.buzz.adapter import BuzzAdapter
     from plugins.platforms.ntfy.adapter import NtfyAdapter
