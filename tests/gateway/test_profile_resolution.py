@@ -268,11 +268,9 @@ class TestGatewayRunnerInjection:
         for a real inbound envelope — fails on main where the Signal branch
         returned a bare ``SignalAdapter(config)`` with no runner."""
         from gateway.config import PlatformConfig
-        from hermes_cli.plugins import discover_plugins
 
         group_id = "test-signal-route"
         monkeypatch.setenv("SIGNAL_GROUP_ALLOWED_USERS", group_id)
-        discover_plugins()
         runner = object.__new__(GatewayRunner)
         runner.config = GatewayConfig(
             multiplex_profiles=True,
