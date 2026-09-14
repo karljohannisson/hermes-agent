@@ -512,6 +512,7 @@ async def _send_chunks(chunks, send_one):
 
 def _platform_max_length(platform):
     """Chunking limit: the registry's ``max_message_length`` for plugins, else None (no chunking)."""
+    prepare_send_message_platforms()
     try:
         from gateway.platform_registry import platform_registry
         entry = platform_registry.get(platform.value)
