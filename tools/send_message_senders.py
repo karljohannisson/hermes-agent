@@ -427,8 +427,8 @@ async def _send_signal(extra, chat_id, message, media_files=None):
         import httpx
     except ImportError:
         return {"error": "httpx not installed"}
-    from gateway.platforms import signal_rate_limit as rl
-    from gateway.platforms.signal_format import markdown_to_signal
+    from plugins.platforms.signal import signal_rate_limit as rl
+    from plugins.platforms.signal.signal_format import markdown_to_signal
     try:
         http_url, account = extra.get("http_url", "http://127.0.0.1:8080").rstrip("/"), extra.get("account", "")
         if not account:

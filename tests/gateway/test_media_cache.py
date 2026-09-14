@@ -130,7 +130,7 @@ class TestWhatsAppCloudParity:
 
 
 class TestSignalParity:
-    """Historical _EXT_TO_MIME table from signal.py, verbatim."""
+    """Historical _EXT_TO_MIME table from plugins/platforms/signal/adapter.py, verbatim."""
 
     HISTORICAL = {
         ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
@@ -143,7 +143,7 @@ class TestSignalParity:
 
     @pytest.mark.parametrize("ext,expected", sorted(HISTORICAL.items()))
     def test_table(self, ext, expected):
-        from gateway.platforms.signal import _ext_to_mime
+        from plugins.platforms.signal.adapter import _ext_to_mime
         assert _ext_to_mime(ext) == expected
         assert _ext_to_mime(ext.upper()) == expected
 
@@ -160,4 +160,3 @@ class TestQQBotParity:
             mime, use_defaults=False, use_mimetypes=True, fallback=".jpg"
         ) or ".jpg"
         assert got == historical
-

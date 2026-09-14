@@ -152,7 +152,7 @@ class TestSignalDelegatesToCentralSniffer:
     """signal._guess_extension audio branches delegate to the shared module."""
 
     def test_signal_uses_shared_sniffer(self, monkeypatch):
-        from gateway.platforms import signal as signal_mod
+        from plugins.platforms.signal import adapter as signal_mod
 
         calls = []
         real = signal_mod.sniff_container

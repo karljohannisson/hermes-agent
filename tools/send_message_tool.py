@@ -511,15 +511,7 @@ async def _send_chunks(chunks, send_one):
 
 
 def _platform_max_length(platform):
-    """Chunking limit: Signal's adapter constant (its raw JSON-RPC path bypasses the adapter's
-    chunking), the registry's ``max_message_length`` for plugins, else None (no chunking)."""
-    from gateway.config import Platform
-    if platform == Platform.SIGNAL:
-        try:
-            from gateway.platforms.signal import MAX_MESSAGE_LENGTH
-            return MAX_MESSAGE_LENGTH
-        except ImportError:
-            return 8000
+    """Chunking limit: the registry's ``max_message_length`` for plugins, else None (no chunking)."""
     try:
         from gateway.platform_registry import platform_registry
         entry = platform_registry.get(platform.value)
@@ -592,6 +584,7 @@ async def _send_to_platform(platform, pconfig, chat_id, message, thread_id=None,
     Weixin first (its native helper must not be blocked by unrelated optional imports such as
     lark-oapi), Telegram (chunks itself), plugin standalone media, native chunked, generic text."""
     from gateway.config import Platform
+    prepare_send_message_platforms()
     platform_name = platform.value if hasattr(platform, "value") else str(platform)
     media_files = media_files or []
     if platform == Platform.WEIXIN:

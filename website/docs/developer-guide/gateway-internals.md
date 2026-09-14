@@ -23,7 +23,7 @@ The messaging gateway is the long-running process that connects Hermes to 20+ ex
 | `gateway/builtin_hooks/` | Extension point for always-registered hooks (none shipped) |
 | `gateway/platform_registry.py` | Adapter registry, factories, and deferred (lazy) loaders for bundled platform plugins |
 | `plugins/platforms/<name>/` | Bundled messaging adapters (most platforms: `adapter.py` + `plugin.yaml`) |
-| `gateway/platforms/` | Shared `base.py` plus legacy/direct adapters (Signal, API server, webhooks, …) |
+| `gateway/platforms/` | Shared `base.py` plus the remaining legacy/direct adapters (API server, webhooks, …) |
 
 ## Architecture Overview
 
@@ -141,7 +141,7 @@ Unlike the CLI (which uses `load_cli_config()` with hardcoded defaults), the gat
 
 ## Platform Adapters
 
-Most messaging platforms ship as plugin adapters under `plugins/platforms/<name>/adapter.py`; a few legacy adapters still live directly in `gateway/platforms/`. All extend `BasePlatformAdapter` from `gateway/platforms/base.py`:
+Most messaging platforms ship as plugin adapters under `plugins/platforms/<name>/adapter.py`; only a few legacy adapters still live directly in `gateway/platforms/`. All extend `BasePlatformAdapter` from `gateway/platforms/base.py`:
 
 ```text
 plugins/platforms/                  # plugin-packaged adapters (one dir each)
@@ -159,12 +159,12 @@ plugins/platforms/                  # plugin-packaged adapters (one dir each)
 ├── line/adapter.py         # LINE Messaging API
 ├── teams/adapter.py        # Microsoft Teams
 ├── irc/adapter.py          # IRC (canonical scoped-lock example)
+├── signal/adapter.py       # Signal via signal-cli HTTP daemon
 ├── homeassistant/adapter.py # Home Assistant conversation integration
 └── …                       # google_chat, ntfy, photon, raft, simplex, …
 
 gateway/platforms/                  # core base + legacy direct adapters
 ├── base.py              # BasePlatformAdapter — shared logic for all platforms
-├── signal.py            # Signal via signal-cli REST API
 ├── weixin.py            # Weixin (personal WeChat) via iLink Bot API
 ├── bluebubbles.py       # Apple iMessage via BlueBubbles macOS server
 ├── qqbot/               # QQ Bot (Tencent QQ) via Official API v2 (sub-package)

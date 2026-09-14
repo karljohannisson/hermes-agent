@@ -33,8 +33,8 @@ from gateway.platforms.helpers import redact_phone
 from gateway.platforms.helpers import cancel_task
 from gateway.platforms.media_cache import mime_for_ext
 from tools.audio_container import CONTAINER_TO_EXT, sniff_container
-from gateway.platforms.signal_format import markdown_to_signal
-from gateway.platforms.signal_rate_limit import (
+from .signal_format import markdown_to_signal
+from .signal_rate_limit import (
     SIGNAL_BATCH_PACING_NOTICE_THRESHOLD, SIGNAL_MAX_ATTACHMENTS_PER_MSG, SIGNAL_RATE_LIMIT_MAX_ATTEMPTS,
     SignalRateLimitError, _extract_retry_after_seconds, _format_wait, _is_signal_rate_limit_error,
     _signal_send_timeout, get_scheduler)
@@ -978,6 +978,101 @@ class SignalAdapter(BasePlatformAdapter):
         result = await self._rpc("getContact", {"account": self.account, "contactAddress": chat_id})
         name = (result.get("name") or result.get("profileName")) if isinstance(result, dict) else None
         return {"name": name or chat_id, "type": "dm", "chat_id": chat_id}
+
+
+def _is_connected(config) -> bool:
+    return validate_signal_config(config)
+
+
+def _env_enablement() -> dict | None:
+    if not (_sig_secret("SIGNAL_HTTP_URL", "").strip() and _sig_secret("SIGNAL_ACCOUNT", "").strip()):
+        return None
+    from gateway.platforms._shared import seed_extra_from_env
+    return seed_extra_from_env((
+        ("SIGNAL_HTTP_URL", "http_url", None),
+        ("SIGNAL_ACCOUNT", "account", None),
+        ("SIGNAL_IGNORE_STORIES", "ignore_stories", None),
+    ), home_env="SIGNAL_HOME_CHANNEL")
+
+
+async def _standalone_send(pconfig, chat_id, message, *, thread_id=None, media_files=None, force_document=False):
+    from tools.send_message_senders import _send_signal
+    return await _send_signal(getattr(pconfig, "extra", {}) or {}, chat_id, message, media_files=media_files)
+
+
+def interactive_setup() -> None:
+    from hermes_cli.config import get_env_value, remove_env_value, save_env_value
+    from hermes_cli.cli_output import print_header, print_info, print_success, print_warning, prompt
+    from hermes_cli.setup_platforms import declines_reconfigure
+
+    print_header("Signal")
+    if declines_reconfigure("Signal", "Reconfigure Signal?", "SIGNAL_HTTP_URL", "SIGNAL_ACCOUNT"):
+        return
+    print_info("Signal uses a signal-cli HTTP daemon for inbound SSE and outbound JSON-RPC.")
+    print_info('Start it separately, e.g. `signal-cli --account +YOURNUMBER daemon --http 127.0.0.1:8080`.')
+    print()
+    http_url = (prompt("HTTP URL", default=get_env_value("SIGNAL_HTTP_URL") or "http://127.0.0.1:8080") or "").strip()
+    if not http_url:
+        print_warning("Skipped — Signal won't work without SIGNAL_HTTP_URL.")
+        return
+    account = (prompt("Signal account (E.164, e.g. +15551234567)", default=get_env_value("SIGNAL_ACCOUNT") or "") or "").strip()
+    if not account:
+        print_warning("Skipped — Signal won't work without SIGNAL_ACCOUNT.")
+        return
+    if not _looks_like_e164_number(account):
+        print_warning("Signal account must be in E.164 format (for example +15551234567).")
+        return
+    save_env_value("SIGNAL_HTTP_URL", http_url)
+    save_env_value("SIGNAL_ACCOUNT", account)
+    allowed_users = prompt(
+        "Allowed users (comma-separated E.164 numbers / UUIDs, blank to keep the default self-allowlist)",
+        default=get_env_value("SIGNAL_ALLOWED_USERS") or account,
+    )
+    save_env_value("SIGNAL_ALLOWED_USERS", (allowed_users or account).replace(" ", ""))
+    allowed_groups = (prompt(
+        "Allowed groups (comma-separated group IDs, * for all, blank to disable)",
+        default=get_env_value("SIGNAL_GROUP_ALLOWED_USERS") or "",
+    ) or "").strip()
+    if allowed_groups:
+        save_env_value("SIGNAL_GROUP_ALLOWED_USERS", allowed_groups.replace(" ", ""))
+    else:
+        remove_env_value("SIGNAL_GROUP_ALLOWED_USERS")
+    print_success("Signal configuration saved.")
+
+
+def _apply_yaml_config(yaml_cfg: dict, signal_cfg: dict) -> dict | None:
+    from gateway.platforms._shared import apply_yaml_bridge
+    return apply_yaml_bridge(signal_cfg, (("require_mention", "SIGNAL_REQUIRE_MENTION", "lower"),))
+
+
+def register(ctx) -> None:
+    ctx.register_platform(
+        name="signal",
+        label="Signal",
+        adapter_factory=SignalAdapter,
+        check_fn=check_signal_requirements,
+        validate_config=validate_signal_config,
+        is_connected=_is_connected,
+        required_env=["SIGNAL_HTTP_URL", "SIGNAL_ACCOUNT"],
+        install_hint="Signal requires a running signal-cli HTTP daemon (`signal-cli --account +YOURNUMBER daemon --http 127.0.0.1:8080`).",
+        setup_fn=interactive_setup,
+        env_enablement_fn=_env_enablement,
+        apply_yaml_config_fn=_apply_yaml_config,
+        allowed_users_env="SIGNAL_ALLOWED_USERS",
+        allow_all_env="SIGNAL_ALLOW_ALL_USERS",
+        cron_deliver_env_var="SIGNAL_HOME_CHANNEL",
+        standalone_sender_fn=_standalone_send,
+        max_message_length=MAX_MESSAGE_LENGTH,
+        emoji="📡",
+        pii_safe=True,
+        allow_update_command=True,
+        platform_hint=(
+            "You are chatting via Signal. Hermes converts standard markdown into "
+            "Signal text styles (bold, italic, strikethrough, monospace, headings, "
+            "and table-safe monospace blocks). Long messages are split automatically; "
+            "keep replies concise and conversational."
+        ),
+    )
 
 
 # ---- BEGIN PLUGIN-COMPAT (revert-scheduled; see COMPAT_MANIFEST.md) ----

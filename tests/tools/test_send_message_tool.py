@@ -20,7 +20,7 @@ _HAS_TELEGRAM = pytest.importorskip("telegram", reason="python-telegram-bot not 
 def _reset_signal_scheduler():
     """Drop the process-wide attachment scheduler so each test gets a
     fresh token bucket."""
-    from gateway.platforms.signal_rate_limit import _reset_scheduler
+    from plugins.platforms.signal.signal_rate_limit import _reset_scheduler
     _reset_scheduler()
     yield
     _reset_scheduler()
@@ -498,7 +498,7 @@ class TestSendToPlatformChunking:
         truncate_message() pass in _send_to_platform must know Signal's limit
         (regression for #67279 / #57929 — long sends were rejected whole).
         """
-        from gateway.platforms.signal import MAX_MESSAGE_LENGTH as SIGNAL_MAX
+        from plugins.platforms.signal.adapter import MAX_MESSAGE_LENGTH as SIGNAL_MAX
         import tools.send_message_tool as smt
 
         sent = []
@@ -1598,10 +1598,10 @@ def _patch_sendmsg_sleep_and_time(monkeypatch, capture: list):
             await _real_sleep(0)
 
     monkeypatch.setattr(
-        "gateway.platforms.signal_rate_limit.asyncio.sleep", fake_sleep
+        "plugins.platforms.signal.signal_rate_limit.asyncio.sleep", fake_sleep
     )
     monkeypatch.setattr(
-        "gateway.platforms.signal_rate_limit.time.monotonic", lambda: offset[0]
+        "plugins.platforms.signal.signal_rate_limit.time.monotonic", lambda: offset[0]
     )
 
 

@@ -248,10 +248,10 @@ class TestGatewayRunnerInjection:
 
     def test_factory_binds_every_adapter_to_runner(self, monkeypatch):
         """``_create_adapter`` binds the runner regardless of which branch
-        built the adapter (plugin registry OR built-in if/elif) — every
+        built the adapter (plugin registry OR remaining built-ins) — every
         lifecycle path (startup, reconnect, secondary profiles) goes through
         it, so this is the single seam that makes profile_routes reachable
-        for built-ins like Signal (#68332 / #70831)."""
+        for bundled plugins like Signal (#68332 / #70831)."""
         from gateway.config import PlatformConfig
 
         runner = object.__new__(GatewayRunner)
@@ -264,13 +264,15 @@ class TestGatewayRunnerInjection:
 
     @pytest.mark.asyncio
     async def test_real_signal_factory_routes_inbound_group_event(self, monkeypatch):
-        """A factory-built (built-in) Signal adapter resolves profile_routes
+        """A factory-built Signal plugin adapter resolves profile_routes
         for a real inbound envelope — fails on main where the Signal branch
         returned a bare ``SignalAdapter(config)`` with no runner."""
         from gateway.config import PlatformConfig
+        from hermes_cli.plugins import discover_plugins
 
         group_id = "test-signal-route"
         monkeypatch.setenv("SIGNAL_GROUP_ALLOWED_USERS", group_id)
+        discover_plugins()
         runner = object.__new__(GatewayRunner)
         runner.config = GatewayConfig(
             multiplex_profiles=True,
@@ -444,5 +446,3 @@ class TestMultiplexGate:
         discord_source.profile = None
 
         assert mock_runner._profile_name_for_source(discord_source) is None
-
-

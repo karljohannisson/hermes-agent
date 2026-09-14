@@ -1,0 +1,16 @@
+name: signal-platform
+label: Signal
+kind: platform
+version: 1.0.0
+description: Signal gateway adapter via signal-cli HTTP daemon (SSE inbound, JSON-RPC outbound). Requires SIGNAL_HTTP_URL and SIGNAL_ACCOUNT. Phone numbers are PII in logs.
+author: NousResearch
+requires_env:
+  - SIGNAL_HTTP_URL
+  - SIGNAL_ACCOUNT
+optional_env:
+  - SIGNAL_ALLOWED_USERS
+  - SIGNAL_ALLOW_ALL_USERS
+  - SIGNAL_GROUP_ALLOWED_USERS
+  - SIGNAL_HOME_CHANNEL
+  - SIGNAL_HOME_CHANNEL_NAME
+  - SIGNAL_IGNORE_STORIES
