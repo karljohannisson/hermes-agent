@@ -1,0 +1,42 @@
+# TEMPORARY: run the windows-marked test set on a standard windows-latest
+# runner (free for personal forks — the 32-core size used by the real lane
+# is org-only and permanently queues on forks).
+# Delete this file after use. Do NOT include in the upstream PR.
+
+name: Windows tests (standard runner)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-tests:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # 8.2.0
+        with:
+          version: "0.9.28"
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Run windows_only tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          LIST=$(mktemp)
+          uv run --no-sync python scripts/ci/list_os_marked_tests.py \
+                 windows_only > "$LIST"
+          if [ ! -s "$LIST" ]; then
+            echo "::error::empty windows_only file list"
+            exit 1
+          fi
+          set -- $(cat "$LIST")
+          echo "selected $# file(s) for windows_only:"
+          cat "$LIST"
+          EXTRA_ARGS=(--ignore-glob='*test_desktop_update_windows_*.py')
+          uv run --no-sync python -m pytest -q --timeout=120 "${EXTRA_ARGS[@]}" "$@"
