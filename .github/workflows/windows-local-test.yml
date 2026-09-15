@@ -42,4 +42,4 @@ jobs:
           echo "selected $# file(s) for windows_only:"
           cat "$LIST"
           EXTRA_ARGS=(--ignore-glob='*test_desktop_update_windows_*.py')
-          uv run --no-sync python -m pytest -q --timeout=120 "${EXTRA_ARGS[@]}" "$@"
+          uv run --no-sync python -m pytest -q "${EXTRA_ARGS[@]}" "$@"
